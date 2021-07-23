@@ -13,4 +13,4 @@ Thumbs.db
 # IntelliJ
 .idea/
 
-.extra/
+/local

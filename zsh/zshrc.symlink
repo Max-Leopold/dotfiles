@@ -1,5 +1,6 @@
 # shortcut to this dotfiles path is $ZSH
 export ZSH=$HOME/.dotfiles
+export DOTFILES=$HOME/.dotfiles
 
 # your project folder that we can `c [tab]` to
 export PROJECTS=~/Documents/Github
@@ -75,3 +76,5 @@ cat << "EOF"
 \____/\____/\____/\__,_/  /_/  /_/\____/_/  /_/ /_/_/_/ /_/\__, /  /_/  /_/\__,_/_/|_|
                                                           /____/
 EOF
+
+export STARSHIP_CONFIG=$DOTFILES/starship/config.toml

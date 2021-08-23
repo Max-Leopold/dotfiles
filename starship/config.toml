@@ -1,6 +1,7 @@
 # => https://starship.rs/config/
 
 format = """
+$time\
 $directory\
 $git_branch\
 $git_commit\
@@ -29,6 +30,13 @@ truncation_length=-1
 [git_branch]
 style="purple"
 symbol = " "
+
+[time]
+disabled = false
+format = '🕙 [\[ $time \]]($style) '
+time_format = "%T"
+utc_time_offset = "local"
+time_range = "-"
 
 [git_state]
 [git_status]
@@ -149,9 +157,6 @@ disable = true
 disable = true
 
 [terraform]
-disable = true
-
-[time]
 disable = true
 
 [username]

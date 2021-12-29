@@ -50,23 +50,11 @@ zle -N down-line-or-beginning-search
 bindkey "^[[A" up-line-or-beginning-search # Up
 bindkey "^[[B" down-line-or-beginning-search # Down
 
-# Plugins
-source $DOTFILES/antigen/antigen.zsh
+# load antibody plugins
+source ~/.zsh_plugins.sh
 
-antigen use oh-my-zsh
-
-antigen bundle djui/alias-tips
-antigen bundle brew
-antigen bundle emoji
-antigen bundle docker
-antigen bundle command-not-found
-
-# these should be at last!
-antigen bundle zsh-users/zsh-autosuggestions
-antigen bundle zdharma/fast-syntax-highlighting
-antigen bundle zsh-users/zsh-history-substring-search
-
-antigen apply
+# prompt
+export STARSHIP_CONFIG=$DOTFILES/starship/config.toml
 
 cat << "EOF"
    ______                __   __  ___                 _                __  ___
@@ -76,5 +64,3 @@ cat << "EOF"
 \____/\____/\____/\__,_/  /_/  /_/\____/_/  /_/ /_/_/_/ /_/\__, /  /_/  /_/\__,_/_/|_|
                                                           /____/
 EOF
-
-export STARSHIP_CONFIG=$DOTFILES/starship/config.toml

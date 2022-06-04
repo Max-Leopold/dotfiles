@@ -46,6 +46,9 @@ brew 'postgresql'
 brew 'grep'
 brew 'screen'
 
+# Shell
+brew 'starship'
+
 # Apps
 # cask 'mactex'
 # cask 'firefox'
@@ -58,7 +61,7 @@ brew 'screen'
 
 # Fonts
 tap 'homebrew/cask-fonts'
-cask 'font-sauce-code-powerline'
+cask 'font-source-code-pro-for-powerline'
 cask 'font-source-code-pro'
 cask 'font-source-sans-pro'
 cask 'font-source-serif-pro'

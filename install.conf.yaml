@@ -9,6 +9,10 @@
 - link:
     ~/.dotfiles: ''
 
+    ~/.doom.d:
+
+    ~/.emacs.d:
+
     ~/.gitconfig: git/gitconfig
     ~/.gitconfig_local:
       path: git/gitconfig_local
@@ -79,5 +83,10 @@
   -
     description: install antibody
     command: "bash antibody/install.sh"
+    stdout: true
+    stdin: true
+  -
+    description: install doom emacs
+    command: "git submodule update --init --recursive --depth=1 emacs.d && emacs.d/bin/doom -y install"
     stdout: true
     stdin: true

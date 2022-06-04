@@ -45,9 +45,13 @@ brew 'node'
 brew 'postgresql'
 brew 'grep'
 brew 'screen'
+brew 'ripgrep'
 
 # Shell
 brew 'starship'
+
+# Emacs
+brew 'emacs'
 
 # Apps
 # cask 'mactex'

@@ -10,7 +10,5 @@ Thumbs.db
 .Spotlight-V100
 .Trashes
 
-# IntelliJ
-.idea/
-
-/local
+# Ignore local customizations
+git/gitconfig_local

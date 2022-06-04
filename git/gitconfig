@@ -158,6 +158,10 @@
 [init]
 
 	defaultBranch = main
+
 [user]
 	name = Max Leopold
 	email = max.leopold2111@gmail.com
+
+[include]
+	path = ~/.gitconfig_local

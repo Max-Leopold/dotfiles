@@ -10,7 +10,9 @@
     ~/.dotfiles: ''
 
     ~/.gitconfig: git/gitconfig
-    ~/.gitconfig_local: git/gitconfig_local
+    ~/.gitconfig_local:
+      path: git/gitconfig_local
+      ignore-missing: true
     ~/.gitignore_global: git/gitignore_global
 
     ~/.shell:

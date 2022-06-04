@@ -12,3 +12,6 @@ bindkey "^[[A" up-line-or-beginning-search # Up
 bindkey "^[[B" down-line-or-beginning-search # Down
 
 export DOTFILES="$HOME/.dotfiles"
+
+# Fix gpg signing
+export GPG_TTY=$(tty)

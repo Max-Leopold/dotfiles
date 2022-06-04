@@ -12,9 +12,7 @@ source ~/.zsh_plugins.sh
 
 # load zsh specific stuff
 source ~/.zsh/completion.zsh
-
-# prompt
-source ~/.shell/prompt.zsh
+source ~/.zsh/prompt.zsh
 
 cat << "EOF"
    ______                __   __  ___                 _                __  ___

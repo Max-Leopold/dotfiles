@@ -10,10 +10,12 @@
     ~/.dotfiles: ''
 
     ~/.gitconfig: git/gitconfig
+    ~/.gitconfig_local: git/gitconfig_local
     ~/.gitignore_global: git/gitignore_global
 
     ~/.shell:
 
+    ~/.zsh:
     ~/.zshrc: zsh/zshrc
 
 

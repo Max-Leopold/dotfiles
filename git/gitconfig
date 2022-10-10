@@ -121,8 +121,8 @@
 
 [push]
 
-	# https://git-scm.com/docs/git-config#git-config-pushdefault
-	default = simple
+	# Make git push infer the right remote branch to push to.
+	default = current
 	# Make `git push` push relevant annotated tags when pushing branches out.
 	followTags = true
 

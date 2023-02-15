@@ -12,3 +12,6 @@ Thumbs.db
 
 # Ignore local customizations
 git/gitconfig_local
+
+# Ignore company specific files
+company/*.zsh

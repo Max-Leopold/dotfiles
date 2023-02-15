@@ -3,7 +3,7 @@
 - defaults:
     link:
       create: true
-      force: true
+      recreate: true
 - clean: ['~']
 
 - link:
@@ -72,14 +72,14 @@
       fi
     stdout: true
     stdin: true
-  -
-    description: set macos defaults
-    command: |
-      if [ "$(uname -s)" = "Darwin" ]; then
-        bash macos/set-defaults.sh
-      fi
-    stdout: true
-    stdin: true
+  # -
+  #   description: set macos defaults
+  #   command: |
+  #     if [ "$(uname -s)" = "Darwin" ]; then
+  #       bash macos/set-defaults.sh
+  #     fi
+  #   stdout: true
+  #   stdin: true
   -
     description: install antibody
     command: "bash antibody/install.sh"
@@ -87,6 +87,6 @@
     stdin: true
   -
     description: install doom emacs
-    command: "git submodule update --init --recursive --depth=1 emacs.d && emacs.d/bin/doom -y install"
+    command: "git submodule update --init --recursive --depth=1 emacs.d && emacs.d/bin/doom install"
     stdout: true
     stdin: true

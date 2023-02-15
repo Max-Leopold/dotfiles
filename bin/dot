@@ -47,5 +47,5 @@ export ZSH=$HOME/.dotfiles
 # $ZSH/homebrew/install.sh 2>&1
 
 # Install software
-echo "› $ZSH/script/install"
-$ZSH/script/install
+echo "› $ZSH/install2"
+$ZSH/install2

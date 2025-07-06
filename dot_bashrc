@@ -1,3 +1,1 @@
 source ~/.config/bash/rc
-
-eval "$(starship init bash)"

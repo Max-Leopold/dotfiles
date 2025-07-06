@@ -1,0 +1,10 @@
+source ~/.config/zsh/shell
+source ~/.config/shell/aliases
+source ~/.config/shell/functions
+source ~/.config/zsh/init
+source ~/.config/shell/envs
+source ~/.config/zsh/prompt
+
+if [ -f ~/.config/zsh/local ]; then
+  source ~/.config/zsh/local
+fi

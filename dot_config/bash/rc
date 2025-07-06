@@ -1,8 +1,8 @@
 source ~/.config/bash/shell
-source ~/.config/bash/aliases
-source ~/.config/bash/functions
+source ~/.config/shell/aliases
+source ~/.config/shell/functions
 source ~/.config/bash/init
-source ~/.config/bash/envs
+source ~/.config/shell/envs
 
 if [ -f ~/.config/bash/local ]; then
   source ~/.config/bash/local

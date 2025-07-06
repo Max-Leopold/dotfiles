@@ -3,6 +3,7 @@ source ~/.config/shell/aliases
 source ~/.config/shell/functions
 source ~/.config/bash/init
 source ~/.config/shell/envs
+source ~/.config/bash/prompt
 
 if [ -f ~/.config/bash/local ]; then
   source ~/.config/bash/local

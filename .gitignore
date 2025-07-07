@@ -15,3 +15,7 @@ git/gitconfig_local
 
 # Ignore company specific files
 company/*.zsh
+
+# Ignore local shell customizations
+dot_config/zsh/local
+dot_config/bash/local

@@ -2,25 +2,40 @@ return {
   "folke/snacks.nvim",
   keys = {
     -- Override default search keys to use CWD for monorepo performance
-    { "<leader><space>", function() return LazyVim.pick("files", { root = false })() end, desc = "Find Files (cwd)" },
-    { "<leader>/", function() return LazyVim.pick("live_grep", { root = false })() end, desc = "Grep (cwd)" },
+    {
+      "<leader><space>",
+      function()
+        return LazyVim.pick("files", { root = false })()
+      end,
+      desc = "Find Files (cwd)",
+    },
+    {
+      "<leader>/",
+      function()
+        return LazyVim.pick("live_grep", { root = false })()
+      end,
+      desc = "Grep (cwd)",
+    },
   },
   opts = {
     bigfile = {
       enabled = true,
       size = 1.5 * 1024 * 1024, -- 1.5MB
     },
+    scroll = {
+      enabled = false, -- Disable scrolling animations
+    },
     picker = {
       -- Performance optimizations for large monorepos
       sources = {
         files = {
-          hidden = false,    -- Don't search hidden files by default for performance
-          ignored = false,   -- Don't search ignored files by default for performance
+          hidden = false, -- Don't search hidden files by default for performance
+          ignored = false, -- Don't search ignored files by default for performance
           -- Exclude common large directories and files
           exclude = {
             -- Build outputs and dependencies
             "node_modules/",
-            "dist/", 
+            "dist/",
             "build/",
             "target/",
             ".next/",
@@ -29,21 +44,21 @@ return {
             ".vite/",
             ".turbo/",
             "coverage/",
-            
+
             -- Lock files and package files
             "package-lock.json",
             "yarn.lock",
             "pnpm-lock.yaml",
             "Cargo.lock",
             "composer.lock",
-            
-            -- Cache and temporary directories  
+
+            -- Cache and temporary directories
             ".cache/",
             ".tmp/",
             "tmp/",
             ".temp/",
             "temp/",
-            
+
             -- Version control and IDE
             ".git/",
             ".svn/",
@@ -53,7 +68,7 @@ return {
             "*.swp",
             "*.swo",
             "*~",
-            
+
             -- Language-specific excludes
             "__pycache__/",
             "*.pyc",
@@ -63,11 +78,11 @@ return {
             ".sass-cache/",
             ".DS_Store",
             "Thumbs.db",
-            
+
             -- Log files
             "*.log",
             "logs/",
-            
+
             -- Ruby interface files (Sorbet)
             "*.rbi",
           },
@@ -77,20 +92,49 @@ return {
           ignored = false,
           -- Same excludes for grep operations
           exclude = {
-            "node_modules/", "dist/", "build/", "target/", ".next/", ".nuxt/",
-            ".output/", ".vite/", ".turbo/", "coverage/", "package-lock.json",
-            "yarn.lock", "pnpm-lock.yaml", "Cargo.lock", "composer.lock",
-            ".cache/", ".tmp/", "tmp/", ".temp/", "temp/", ".git/", ".svn/",
-            ".hg/", ".vscode/", ".idea/", "__pycache__/", "*.pyc", 
-            ".pytest_cache/", "vendor/", ".bundle/", ".sass-cache/",
-            ".DS_Store", "Thumbs.db", "*.log", "logs/", "*.rbi",
+            "node_modules/",
+            "dist/",
+            "build/",
+            "target/",
+            ".next/",
+            ".nuxt/",
+            ".output/",
+            ".vite/",
+            ".turbo/",
+            "coverage/",
+            "package-lock.json",
+            "yarn.lock",
+            "pnpm-lock.yaml",
+            "Cargo.lock",
+            "composer.lock",
+            ".cache/",
+            ".tmp/",
+            "tmp/",
+            ".temp/",
+            "temp/",
+            ".git/",
+            ".svn/",
+            ".hg/",
+            ".vscode/",
+            ".idea/",
+            "__pycache__/",
+            "*.pyc",
+            ".pytest_cache/",
+            "vendor/",
+            ".bundle/",
+            ".sass-cache/",
+            ".DS_Store",
+            "Thumbs.db",
+            "*.log",
+            "logs/",
+            "*.rbi",
           },
         },
       },
       formatters = {
         file = {
           filename_first = true,
-          truncate = 1000,  -- Don't truncate paths
+          truncate = 1000, -- Don't truncate paths
         },
       },
       win = {
@@ -104,10 +148,10 @@ return {
         -- Enable wrapping in the results list
         list = {
           wo = {
-            wrap = true,        -- Enable line wrapping
-            linebreak = true,   -- Wrap at word boundaries
+            wrap = true, -- Enable line wrapping
+            linebreak = true, -- Wrap at word boundaries
             breakindent = true, -- Preserve indentation on wrapped lines
-            conceallevel = 2,   -- Keep existing config
+            conceallevel = 2, -- Keep existing config
             concealcursor = "nvc",
           },
         },

@@ -1,5 +1,10 @@
 return {
   "folke/snacks.nvim",
+  keys = {
+    -- Override default search keys to use CWD for monorepo performance
+    { "<leader><space>", function() return LazyVim.pick("files", { root = false })() end, desc = "Find Files (cwd)" },
+    { "<leader>/", function() return LazyVim.pick("live_grep", { root = false })() end, desc = "Grep (cwd)" },
+  },
   opts = {
     bigfile = {
       enabled = true,

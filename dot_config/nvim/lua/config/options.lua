@@ -24,5 +24,5 @@ vim.api.nvim_create_autocmd({ "FocusLost", "BufLeave" }, {
 -- Notify on buffer reload
 vim.api.nvim_create_autocmd("FileChangedShellPost", {
   pattern = "*",
-  command = "echohl WarningMsg | echo 'File changes on disk. Buffer reloaded. | echohl None",
+  command = "echohl WarningMsg | echo 'File changes on disk. Buffer reloaded.' | echohl None",
 })

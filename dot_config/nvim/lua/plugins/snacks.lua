@@ -62,6 +62,9 @@ return {
             -- Log files
             "*.log",
             "logs/",
+            
+            -- Ruby interface files (Sorbet)
+            "*.rbi",
           },
         },
         grep = {
@@ -75,7 +78,7 @@ return {
             ".cache/", ".tmp/", "tmp/", ".temp/", "temp/", ".git/", ".svn/",
             ".hg/", ".vscode/", ".idea/", "__pycache__/", "*.pyc", 
             ".pytest_cache/", "vendor/", ".bundle/", ".sass-cache/",
-            ".DS_Store", "Thumbs.db", "*.log", "logs/",
+            ".DS_Store", "Thumbs.db", "*.log", "logs/", "*.rbi",
           },
         },
       },

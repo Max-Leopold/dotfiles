@@ -1,0 +1,23 @@
+# Ghostty Terminal Configuration
+
+# Theme
+theme = OneHalfDark
+
+# Font Configuration
+font-family = "MesloLGS Nerd Font"
+font-size = 14
+font-thicken = true
+font-thicken-strength = 255
+
+# Window Settings
+window-padding-x = 10
+window-padding-y = 10
+
+# Terminal Behavior
+scrollback-limit = 10000
+shell-integration = detect
+mouse-hide-while-typing = true
+cursor-style = block
+
+# macOS Specific
+macos-titlebar-style = transparent

@@ -11,6 +11,7 @@ return {
     quickfile = { enabled = true },
     statuscolumn = { enabled = true },
     words = { enabled = true },
+    lazygit = {},
   },
   keys = {
     -- Buffer
@@ -124,6 +125,13 @@ return {
         Snacks.picker.git_stash()
       end,
       desc = 'Git Stash',
+    },
+    {
+      '<leader>gg',
+      function()
+        Snacks.lazygit()
+      end,
+      desc = 'LazyGit',
     },
     -- Grep
     {

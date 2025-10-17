@@ -23,5 +23,12 @@ return {
       end,
       desc = 'Open file picker',
     },
+    {
+      'gf',
+      function()
+        require('fff').open_file_under_cursor()
+      end,
+      desc = 'Open file under cursor',
+    },
   },
 }

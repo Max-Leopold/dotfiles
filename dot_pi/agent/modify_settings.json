@@ -1,0 +1,32 @@
+#!/bin/bash
+# Merge chezmoi-managed keys into existing pi settings.
+# Existing keys not listed here are preserved.
+
+if ! command -v jq &>/dev/null; then
+  echo "jq is required but not installed" >&2
+  cat  # pass through unchanged
+  exit 0
+fi
+
+MANAGED='{
+  "compaction": {
+    "enabled": false
+  },
+  "skills": ["~/.pi/agent/skills", "~/.claude/skills"],
+  "prompts": ["~/.pi/agent/prompts", "~/.claude/commands"],
+  "extensions": ["~/.pi/agent/extensions"]
+}'
+
+# Read current file from stdin; if empty, start with {}
+CURRENT=$(cat)
+if [ -z "$CURRENT" ]; then
+  CURRENT="{}"
+fi
+
+# Deep merge: managed keys win; array values are unioned and deduplicated.
+echo "$CURRENT" | jq --argjson managed "$MANAGED" '
+  . as $current | . * $managed
+  | reduce ("skills", "prompts", "extensions") as $k (.;
+      .[$k] = ([($current[$k] // [])[], ($managed[$k] // [])[]] | unique)
+    )
+'

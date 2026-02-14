@@ -24,8 +24,9 @@ import { Type } from "@sinclair/typebox";
 
 const CRITIQUE_TIMEOUT_MS = 600_000; // 10 minutes
 
-// Prefer a different model than the main agent to avoid echo-chamber bias
-const MODEL_CANDIDATES: ReadonlyArray<[string, string]> = [
+// Preference order for critic model — tried first among available models.
+// Any available model not in this list is still eligible as a fallback.
+const MODEL_PREFERENCE: ReadonlyArray<[string, string]> = [
   ["anthropic", "claude-opus-4-6"],
   ["openai", "gpt-5.3-codex"],
   ["google", "gemini-3-pro-preview"],
@@ -96,23 +97,57 @@ const CRITIC_RESOURCE_LOADER: ResourceLoader = {
   reload: async () => { },
 };
 
-/** Find a usable model + API key, preferring one different from the main agent. */
+/**
+ * Find a usable model + API key, preferring one different from the main agent.
+ *
+ * Strategy:
+ * 1. Walk the preference list — pick the first available model that isn't the current one.
+ * 2. If nothing from the preference list works, pick any available model that differs
+ *    from the current one, preferring reasoning-capable models.
+ * 3. Fall back to the current model if it's all we have.
+ */
 async function findCriticModel(ctx: ExtensionContext) {
   const currentId = ctx.model?.id;
+  const currentProvider = ctx.model?.provider;
 
-  for (const [provider, id] of MODEL_CANDIDATES) {
-    if (id === currentId) continue;
-    const model = getModel(provider, id);
+  // Build a set of preference-list model keys for fast lookup
+  const preferenceKeys = new Set(MODEL_PREFERENCE.map(([p, id]) => `${p}/${id}`));
+
+  // Step 1: Walk the explicit preference list
+  for (const [provider, id] of MODEL_PREFERENCE) {
+    if (id === currentId && provider === currentProvider) continue;
+
+    // Try the registry first (handles custom models, overrides, etc.)
+    const model = ctx.modelRegistry.find(provider, id) ?? getModel(provider, id);
     if (!model) continue;
+
     const key = await ctx.modelRegistry.getApiKey(model).catch(() => null);
     if (key) return { model, apiKey: key };
   }
 
-  // Same model is better than nothing
+  // Step 2: Query the registry for all available models and pick the best fallback
+  const available = ctx.modelRegistry.getAvailable();
+
+  // Sort: reasoning models first, then by name for stability
+  const fallbacks = available
+    .filter((m) => !(m.id === currentId && m.provider === currentProvider))
+    .filter((m) => !preferenceKeys.has(`${m.provider}/${m.id}`)) // already tried
+    .sort((a, b) => {
+      if (a.reasoning !== b.reasoning) return a.reasoning ? -1 : 1;
+      return a.id.localeCompare(b.id);
+    });
+
+  for (const model of fallbacks) {
+    const key = await ctx.modelRegistry.getApiKey(model).catch(() => null);
+    if (key) return { model, apiKey: key };
+  }
+
+  // Step 3: Same model is better than nothing
   if (ctx.model) {
     const key = await ctx.modelRegistry.getApiKey(ctx.model).catch(() => null);
     if (key) return { model: ctx.model, apiKey: key };
   }
+
   return null;
 }
 
@@ -133,6 +168,12 @@ export default function(pi: ExtensionAPI) {
             'Optional focus areas, e.g. "security and error handling" or "performance of the database layer". If omitted, all categories are reviewed.',
         }),
       ),
+      relatedFiles: Type.Optional(
+        Type.Array(Type.String(), {
+          description:
+            "File paths directly relevant to the review (e.g. files you've been editing or plan to change). The critic will start from these rather than rediscovering context.",
+        }),
+      ),
     }),
 
     async execute(_toolCallId, params, signal, onUpdate, ctx) {
@@ -145,37 +186,58 @@ export default function(pi: ExtensionAPI) {
         return { content: [{ type: "text", text: "No model available for critique. Check your API keys." }], isError: true };
       }
 
-      if (signal?.aborted) {
-        return { content: [{ type: "text", text: "Critique was cancelled." }], isError: true };
-      }
-
       const modelLabel = `${critic.model.provider}/${critic.model.id}`;
       onUpdate?.({ content: [{ type: "text", text: `Critiquing with ${modelLabel}...` }] });
 
+      // Build the user prompt with all available context
       let userPrompt = `Review the following for flaws, risks, and blind spots:\n\n${params.content}`;
-      if (params.focus) userPrompt += `\n\nFocus especially on: ${params.focus}`;
+
+      if (params.focus) {
+        userPrompt += `\n\nFocus especially on: ${params.focus}`;
+      }
+
+      // Seed the critic with related file paths
+      if (params.relatedFiles?.length) {
+        const paths = params.relatedFiles.map((p) => `  - ${p}`).join("\n");
+        userPrompt += `\n\n## Related Files\nThese files are directly relevant to the review. Start by reading them to ground your analysis:\n${paths}`;
+      }
 
       // Create sub-agent with isolated session
-      const authStorage = new AuthStorage();
-      authStorage.setRuntimeApiKey(critic.model.provider, critic.apiKey);
-      const { session } = await createAgentSession({
-        cwd: ctx.cwd,
-        model: critic.model,
-        thinkingLevel: "high",
-        tools: createReadOnlyTools(ctx.cwd),
-        sessionManager: SessionManager.inMemory(),
-        settingsManager: SettingsManager.inMemory({ compaction: { enabled: false }, retry: { enabled: false } }),
-        resourceLoader: CRITIC_RESOURCE_LOADER,
-        authStorage,
-        modelRegistry: new ModelRegistry(authStorage),
-      });
+      let session;
+      try {
+        const authStorage = new AuthStorage();
+        authStorage.setRuntimeApiKey(critic.model.provider, critic.apiKey);
+        ({ session } = await createAgentSession({
+          cwd: ctx.cwd,
+          model: critic.model,
+          thinkingLevel: "high",
+          tools: createReadOnlyTools(ctx.cwd),
+          sessionManager: SessionManager.inMemory(),
+          settingsManager: SettingsManager.inMemory({
+            compaction: { enabled: false },
+            retry: { enabled: true, maxRetries: 1 },
+          }),
+          resourceLoader: CRITIC_RESOURCE_LOADER,
+          authStorage,
+          modelRegistry: new ModelRegistry(authStorage),
+        }));
+      } catch (err: any) {
+        return {
+          content: [{ type: "text", text: `Failed to start critic (${modelLabel}): ${err?.message ?? err}` }],
+          isError: true,
+        };
+      }
 
-      const abort = () => session.abort();
+      let disposed = false;
+      const abort = () => { if (!disposed) session.abort(); };
       let timeoutId: ReturnType<typeof setTimeout> | undefined;
       let unsubscribe: (() => void) | undefined;
 
       try {
         signal?.addEventListener("abort", abort, { once: true });
+        if (signal?.aborted) {
+          return { content: [{ type: "text", text: "Critique was cancelled." }], isError: true };
+        }
         timeoutId = setTimeout(abort, CRITIQUE_TIMEOUT_MS);
 
         // Stream tool activity as progress
@@ -204,7 +266,7 @@ export default function(pi: ExtensionAPI) {
           },
         };
       } catch (err: any) {
-        if (err?.name === "AbortError" || signal?.aborted) {
+        if (signal?.aborted || err?.name === "AbortError" || err?.code === "ABORT_ERR") {
           return { content: [{ type: "text", text: "Critique was cancelled." }], isError: true };
         }
         return {
@@ -215,21 +277,35 @@ export default function(pi: ExtensionAPI) {
         if (timeoutId) clearTimeout(timeoutId);
         signal?.removeEventListener("abort", abort);
         unsubscribe?.();
+        disposed = true;
         session.dispose();
       }
     },
 
     renderCall(args, theme) {
-      let text = theme.fg("toolTitle", theme.bold("critique "));
-      if (args.focus) text += theme.fg("accent", `[${args.focus}]`);
+      const container = new Container();
 
-      const content = args.content ?? "";
-      const lines = content.split("\n");
-      const preview = lines[0].length > 80 ? `${lines[0].slice(0, 80)}...` : lines[0];
-      text += "\n  " + theme.fg("dim", preview);
-      if (lines.length > 1) text += theme.fg("muted", ` (+${lines.length - 1} lines)`);
+      // Header line
+      let header = theme.fg("toolTitle", theme.bold("critique"));
+      if (args.focus) header += " " + theme.fg("accent", `[${args.focus}]`);
+      container.addChild(new Text(header, 0, 0));
 
-      return new Text(text, 0, 0);
+      // Full plan content
+      if (args.content) {
+        container.addChild(new Text("", 0, 0));
+        container.addChild(new Markdown(args.content, 0, 0, getMarkdownTheme()));
+      }
+
+      // Related files
+      if (args.relatedFiles?.length) {
+        container.addChild(new Text("", 0, 0));
+        container.addChild(new Text(theme.fg("muted", "── Related files ──"), 0, 0));
+        for (const file of args.relatedFiles) {
+          container.addChild(new Text("  " + theme.fg("accent", file), 0, 0));
+        }
+      }
+
+      return container;
     },
 
     renderResult(result, _state, theme) {

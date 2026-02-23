@@ -196,7 +196,8 @@ class FilePickerOverlay implements Focusable {
 
     // Preview state
     private previewPath: string | null = null;
-    private previewLines: string[] = [];
+    private previewRawLines: string[] = [];
+    private previewLang: string | undefined = undefined;
     private previewLoading = false;
     private previewError: string | null = null;
     private previewScroll = 0;
@@ -283,7 +284,8 @@ class FilePickerOverlay implements Focusable {
         const item = this.results[this.selectedIndex];
         if (!item || item.isDirectory) {
             this.previewPath = item?.path ?? null;
-            this.previewLines = item ? ["", "  (directory)"] : [];
+            this.previewRawLines = item ? ["", "  (directory)"] : [];
+            this.previewLang = undefined;
             this.previewError = null;
             this.previewLoading = false;
             this.previewScroll = 0;
@@ -302,11 +304,12 @@ class FilePickerOverlay implements Focusable {
                 if (this.previewPath !== path) return; // stale
 
                 if (isBinary(buf)) {
-                    this.previewLines = ["", "  (binary file)"];
+                    this.previewRawLines = ["", "  (binary file)"];
+                    this.previewLang = undefined;
                 } else {
                     const text = buf.toString("utf-8");
-                    const lang = getLanguageFromPath(path);
-                    this.previewLines = highlightCode(text, lang);
+                    this.previewRawLines = text.split("\n");
+                    this.previewLang = getLanguageFromPath(path);
                 }
                 this.previewLoading = false;
                 this.tui.requestRender();
@@ -318,7 +321,8 @@ class FilePickerOverlay implements Focusable {
                 this.previewError = code === "EISDIR" ? "(directory)"
                     : code === "ETOOLARGE" ? "(file too large)"
                     : (err?.message ?? "read error");
-                this.previewLines = [];
+                this.previewRawLines = [];
+                this.previewLang = undefined;
                 this.tui.requestRender();
             });
     }
@@ -332,7 +336,7 @@ class FilePickerOverlay implements Focusable {
     }
 
     private scrollPreview(delta: number): void {
-        const maxScroll = Math.max(0, this.previewLines.length - this.layout.previewContentRows);
+        const maxScroll = Math.max(0, this.previewRawLines.length - this.layout.previewContentRows);
         this.previewScroll = Math.max(0, Math.min(this.previewScroll + delta, maxScroll));
     }
 
@@ -502,14 +506,17 @@ class FilePickerOverlay implements Focusable {
             lines.push(` ${th.fg("muted", "Loading...")}`);
         } else if (this.previewError) {
             lines.push(` ${th.fg("error", this.previewError)}`);
-        } else if (this.previewLines.length === 0 && !selectedItem) {
+        } else if (this.previewRawLines.length === 0 && !selectedItem) {
             // no file selected
         } else {
-            const pLines = this.previewLines;
             const start = this.previewScroll;
-            const end = Math.min(start + contentHeight, pLines.length);
-            for (let i = start; i < end; i++) {
-                const line = (pLines[i] ?? "").replace(/\t/g, "  ");
+            const end = Math.min(start + contentHeight, this.previewRawLines.length);
+            const visibleRaw = this.previewRawLines.slice(start, end).join("\n");
+            const highlighted = this.previewLang
+                ? highlightCode(visibleRaw, this.previewLang)
+                : visibleRaw.split("\n");
+            for (const hl of highlighted) {
+                const line = (hl ?? "").replace(/\t/g, "  ");
                 lines.push(truncateToWidth(` ${line}`, rightW, ELLIPSIS));
             }
         }

@@ -574,8 +574,12 @@ class FilePickerOverlay implements Focusable {
 }
 
 async function openFilePicker(ctx: ExtensionContext): Promise<void> {
+    let appTui: TUI | null = null;
     const result = await ctx.ui.custom<string | null>(
-        (tui, theme, _kb, done) => new FilePickerOverlay(tui, theme, done),
+        (tui, theme, _kb, done) => {
+            appTui = tui;
+            return new FilePickerOverlay(tui, theme, done);
+        },
         {
             overlay: true,
             overlayOptions: {
@@ -590,6 +594,7 @@ async function openFilePicker(ctx: ExtensionContext): Promise<void> {
 
     if (result) {
         ctx.ui.pasteToEditor(`${result} `);
+        appTui?.requestRender();
     }
 }
 

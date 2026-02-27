@@ -7,29 +7,24 @@
  * Usage: place in ~/.pi/agent/extensions/ and reload.
  */
 
-import { getModel } from "@mariozechner/pi-ai";
 import type { ExtensionAPI, ExtensionContext, ResourceLoader } from "@mariozechner/pi-coding-agent";
 import {
-  AuthStorage,
   createAgentSession,
   createExtensionRuntime,
   createReadOnlyTools,
   getMarkdownTheme,
-  ModelRegistry,
   SessionManager,
   SettingsManager,
 } from "@mariozechner/pi-coding-agent";
 import { Container, Markdown, Text } from "@mariozechner/pi-tui";
 import { Type } from "@sinclair/typebox";
 
-const CRITIQUE_TIMEOUT_MS = 600_000; // 10 minutes
-
 // Preference order for critic model — tried first among available models.
 // Any available model not in this list is still eligible as a fallback.
 const MODEL_PREFERENCE: ReadonlyArray<[string, string]> = [
   ["anthropic", "claude-opus-4-6"],
   ["openai", "gpt-5.3-codex"],
-  ["google", "gemini-3-pro-preview"],
+  ["google", "gemini-3.1-pro-preview"],
   ["anthropic", "claude-opus-4-5"],
   ["anthropic", "claude-sonnet-4-5"],
   ["openai", "gpt-5-codex"],
@@ -97,58 +92,134 @@ const CRITIC_RESOURCE_LOADER: ResourceLoader = {
   reload: async () => { },
 };
 
-/**
- * Find a usable model + API key, preferring one different from the main agent.
- *
- * Strategy:
- * 1. Walk the preference list — pick the first available model that isn't the current one.
- * 2. If nothing from the preference list works, pick any available model that differs
- *    from the current one, preferring reasoning-capable models.
- * 3. Fall back to the current model if it's all we have.
- */
-async function findCriticModel(ctx: ExtensionContext) {
-  const currentId = ctx.model?.id;
-  const currentProvider = ctx.model?.provider;
+type BasicModel = { provider: string; id: string; reasoning?: boolean };
 
-  // Build a set of preference-list model keys for fast lookup
-  const preferenceKeys = new Set(MODEL_PREFERENCE.map(([p, id]) => `${p}/${id}`));
+type CriticModelResult = { model: BasicModel } | { error: string };
 
-  // Step 1: Walk the explicit preference list
+function modelLabel(model: Pick<BasicModel, "provider" | "id">) {
+  return `${model.provider}/${model.id}`;
+}
+
+function formatAvailableModels(models: ReadonlyArray<BasicModel>) {
+  if (!models.length) return "(none)";
+
+  const sorted = [...models].sort((a, b) => modelLabel(a).localeCompare(modelLabel(b)));
+  return sorted.map((m) => `- ${modelLabel(m)}`).join("\n");
+}
+
+function formatAvailableModelsBlock(models: ReadonlyArray<BasicModel>) {
+  return `Available models:\n${formatAvailableModels(models)}`;
+}
+
+function formatErrorDetails(err: unknown) {
+  const value = err as { message?: string; code?: string; status?: number; requestId?: string; cause?: unknown } | undefined;
+  if (!value) return "unknown error";
+
+  const parts = [
+    value.message,
+    typeof value.code === "string" ? `code=${value.code}` : undefined,
+    typeof value.status === "number" ? `status=${value.status}` : undefined,
+    typeof value.requestId === "string" ? `requestId=${value.requestId}` : undefined,
+  ].filter(Boolean);
+
+  if (parts.length > 0) return parts.join("; ");
+  return String(err);
+}
+
+function parseRequestedModel(requestedModel: string) {
+  const value = requestedModel.trim();
+  if (!value) return null;
+
+  const slashIndex = value.indexOf("/");
+  if (slashIndex === -1) {
+    return { id: value };
+  }
+
+  const provider = value.slice(0, slashIndex).trim();
+  const id = value.slice(slashIndex + 1).trim();
+  if (!provider || !id) return null;
+
+  return { provider, id };
+}
+
+function equalsIgnoreCase(a: string, b: string) {
+  return a.toLowerCase() === b.toLowerCase();
+}
+
+function findPreferredAvailableModel(available: BasicModel[]) {
   for (const [provider, id] of MODEL_PREFERENCE) {
-    if (id === currentId && provider === currentProvider) continue;
-
-    // Try the registry first (handles custom models, overrides, etc.)
-    const model = ctx.modelRegistry.find(provider, id) ?? getModel(provider, id);
-    if (!model) continue;
-
-    const key = await ctx.modelRegistry.getApiKey(model).catch(() => null);
-    if (key) return { model, apiKey: key };
+    const match = available.find((m) => equalsIgnoreCase(m.provider, provider) && equalsIgnoreCase(m.id, id));
+    if (match) return match;
   }
 
-  // Step 2: Query the registry for all available models and pick the best fallback
-  const available = ctx.modelRegistry.getAvailable();
+  const sorted = [...available].sort((a, b) => {
+    if (a.reasoning !== b.reasoning) return a.reasoning ? -1 : 1;
+    return modelLabel(a).localeCompare(modelLabel(b));
+  });
 
-  // Sort: reasoning models first, then by name for stability
-  const fallbacks = available
-    .filter((m) => !(m.id === currentId && m.provider === currentProvider))
-    .filter((m) => !preferenceKeys.has(`${m.provider}/${m.id}`)) // already tried
-    .sort((a, b) => {
-      if (a.reasoning !== b.reasoning) return a.reasoning ? -1 : 1;
-      return a.id.localeCompare(b.id);
-    });
+  return sorted[0];
+}
 
-  for (const model of fallbacks) {
-    const key = await ctx.modelRegistry.getApiKey(model).catch(() => null);
-    if (key) return { model, apiKey: key };
+async function findCriticModel(ctx: ExtensionContext, requestedModel?: string): Promise<CriticModelResult> {
+  const available = ctx.modelRegistry.getAvailable() as BasicModel[];
+
+  if (!available.length) {
+    return { error: "No model available for critique. Check your API keys." };
   }
 
-  // Step 3: Same model is better than nothing
-  if (ctx.model) {
-    const key = await ctx.modelRegistry.getApiKey(ctx.model).catch(() => null);
-    if (key) return { model: ctx.model, apiKey: key };
+  if (requestedModel) {
+    const parsed = parseRequestedModel(requestedModel);
+    if (!parsed) {
+      return { error: `Invalid model format: "${requestedModel}". Use "provider/model-id" or "model-id".` };
+    }
+
+    if ("provider" in parsed) {
+      const exactAvailable = available.find((m) =>
+        equalsIgnoreCase(m.provider, parsed.provider) && equalsIgnoreCase(m.id, parsed.id),
+      );
+      if (exactAvailable) return { model: exactAvailable };
+
+      const configuredModel = ctx.modelRegistry.find(parsed.provider, parsed.id) as BasicModel | undefined;
+      if (configuredModel) {
+        const key = await ctx.modelRegistry.getApiKey(configuredModel).catch(() => undefined);
+        if (!key) {
+          return {
+            error: `Requested critique model "${parsed.provider}/${parsed.id}" exists, but API credentials for provider "${parsed.provider}" are missing.`,
+          };
+        }
+      }
+
+      return {
+        error:
+          `Requested critique model "${parsed.provider}/${parsed.id}" is not available.\n\n` +
+          formatAvailableModelsBlock(available),
+      };
+    }
+
+    const idMatches = available.filter((m) => equalsIgnoreCase(m.id, parsed.id));
+    if (idMatches.length === 1) return { model: idMatches[0]! };
+
+    if (idMatches.length > 1) {
+      return {
+        error:
+          `Requested critique model id "${parsed.id}" is ambiguous across providers. Use provider/model-id.\n\n` +
+          formatAvailableModelsBlock(available),
+      };
+    }
+
+    return {
+      error:
+        `Requested critique model "${parsed.id}" was not found among available models.\n\n` +
+        formatAvailableModelsBlock(available),
+    };
   }
 
-  return null;
+  const preferred = findPreferredAvailableModel(available);
+  if (preferred) return { model: preferred };
+
+  return {
+    error: `No model with API credentials is available for critique.\n\n${formatAvailableModelsBlock(available)}`,
+  };
 }
 
 export default function(pi: ExtensionAPI) {
@@ -174,6 +245,12 @@ export default function(pi: ExtensionAPI) {
             "File paths directly relevant to the review (e.g. files you've been editing or plan to change). The critic will start from these rather than rediscovering context.",
         }),
       ),
+      model: Type.Optional(
+        Type.String({
+          description:
+            "Optional critique model override. Use \"provider/model-id\" (e.g. \"anthropic/claude-sonnet-4-5\") or a bare model id.",
+        }),
+      ),
     }),
 
     async execute(_toolCallId, params, signal, onUpdate, ctx) {
@@ -181,11 +258,13 @@ export default function(pi: ExtensionAPI) {
         return { content: [{ type: "text", text: "Cannot critique empty content." }], isError: true };
       }
 
-      const critic = await findCriticModel(ctx);
-      if (!critic) {
-        return { content: [{ type: "text", text: "No model available for critique. Check your API keys." }], isError: true };
+      const requestedModel = typeof params.model === "string" ? params.model.trim() : "";
+      const criticResult = await findCriticModel(ctx, requestedModel || undefined);
+      if ("error" in criticResult) {
+        return { content: [{ type: "text", text: criticResult.error }], isError: true };
       }
 
+      const critic = criticResult;
       const modelLabel = `${critic.model.provider}/${critic.model.id}`;
       onUpdate?.({ content: [{ type: "text", text: `Critiquing with ${modelLabel}...` }] });
 
@@ -205,8 +284,6 @@ export default function(pi: ExtensionAPI) {
       // Create sub-agent with isolated session
       let session;
       try {
-        const authStorage = new AuthStorage();
-        authStorage.setRuntimeApiKey(critic.model.provider, critic.apiKey);
         ({ session } = await createAgentSession({
           cwd: ctx.cwd,
           model: critic.model,
@@ -218,19 +295,17 @@ export default function(pi: ExtensionAPI) {
             retry: { enabled: true, maxRetries: 1 },
           }),
           resourceLoader: CRITIC_RESOURCE_LOADER,
-          authStorage,
-          modelRegistry: new ModelRegistry(authStorage),
+          modelRegistry: ctx.modelRegistry,
         }));
-      } catch (err: any) {
+      } catch (err: unknown) {
         return {
-          content: [{ type: "text", text: `Failed to start critic (${modelLabel}): ${err?.message ?? err}` }],
+          content: [{ type: "text", text: `Failed to start critic (${modelLabel}): ${formatErrorDetails(err)}` }],
           isError: true,
         };
       }
 
       let disposed = false;
       const abort = () => { if (!disposed) session.abort(); };
-      let timeoutId: ReturnType<typeof setTimeout> | undefined;
       let unsubscribe: (() => void) | undefined;
 
       try {
@@ -238,8 +313,6 @@ export default function(pi: ExtensionAPI) {
         if (signal?.aborted) {
           return { content: [{ type: "text", text: "Critique was cancelled." }], isError: true };
         }
-        timeoutId = setTimeout(abort, CRITIQUE_TIMEOUT_MS);
-
         // Stream tool activity as progress
         unsubscribe = session.subscribe((event) => {
           if (event.type === "tool_execution_start") {
@@ -251,12 +324,29 @@ export default function(pi: ExtensionAPI) {
 
         await session.prompt(userPrompt);
         const response = session.getLastAssistantText() ?? "";
+        const stats = session.getSessionStats();
+        const lastAssistant = [...(session.messages as Array<{ role: string; stopReason?: string }>)]
+          .reverse()
+          .find((message) => message.role === "assistant");
 
         if (!response.trim()) {
-          return { content: [{ type: "text", text: "Critic returned empty. Try again." }], isError: true };
+          if (signal?.aborted || lastAssistant?.stopReason === "aborted") {
+            return { content: [{ type: "text", text: "Critique was cancelled." }], isError: true };
+          }
+
+          const availableModels = ctx.modelRegistry.getAvailable() as BasicModel[];
+
+          return {
+            content: [{
+              type: "text",
+              text:
+                `Critique model ${modelLabel} returned an empty response (output tokens: ${stats.tokens.output}).\n\n` +
+                formatAvailableModelsBlock(availableModels),
+            }],
+            isError: true,
+          };
         }
 
-        const stats = session.getSessionStats();
         return {
           content: [{ type: "text", text: response }],
           details: {
@@ -265,16 +355,15 @@ export default function(pi: ExtensionAPI) {
             tokens: { input: stats.tokens.input, output: stats.tokens.output, cost: stats.cost },
           },
         };
-      } catch (err: any) {
-        if (signal?.aborted || err?.name === "AbortError" || err?.code === "ABORT_ERR") {
+      } catch (err: unknown) {
+        if (signal?.aborted || (err as { name?: string; code?: string })?.name === "AbortError" || (err as { code?: string })?.code === "ABORT_ERR") {
           return { content: [{ type: "text", text: "Critique was cancelled." }], isError: true };
         }
         return {
-          content: [{ type: "text", text: `Critique failed (${modelLabel}): ${err?.message ?? err}` }],
+          content: [{ type: "text", text: `Critique failed (${modelLabel}): ${formatErrorDetails(err)}` }],
           isError: true,
         };
       } finally {
-        if (timeoutId) clearTimeout(timeoutId);
         signal?.removeEventListener("abort", abort);
         unsubscribe?.();
         disposed = true;
@@ -288,6 +377,7 @@ export default function(pi: ExtensionAPI) {
       // Header line
       let header = theme.fg("toolTitle", theme.bold("critique"));
       if (args.focus) header += " " + theme.fg("accent", `[${args.focus}]`);
+      if (args.model) header += " " + theme.fg("dim", `(model: ${args.model})`);
       container.addChild(new Text(header, 0, 0));
 
       // Full plan content

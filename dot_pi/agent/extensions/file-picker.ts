@@ -15,8 +15,8 @@
 
 import type { ExtensionAPI, ExtensionContext, Theme } from "@mariozechner/pi-coding-agent";
 import { highlightCode, getLanguageFromPath } from "@mariozechner/pi-coding-agent";
-import type { TUI, Focusable } from "@mariozechner/pi-tui";
-import { Input, getEditorKeybindings, matchesKey, truncateToWidth, visibleWidth } from "@mariozechner/pi-tui";
+import type { TUI, Focusable, KeybindingsManager } from "@mariozechner/pi-tui";
+import { Input, matchesKey, truncateToWidth, visibleWidth } from "@mariozechner/pi-tui";
 import { spawn, type ChildProcess } from "child_process";
 import { readFile, stat } from "fs/promises";
 import { basename, dirname } from "path";
@@ -213,6 +213,7 @@ class FilePickerOverlay implements Focusable {
     constructor(
         private tui: TUI,
         private theme: Theme,
+        private keybindings: KeybindingsManager,
         private done: (result: string | null) => void,
     ) {
         this.input = new Input();
@@ -343,17 +344,17 @@ class FilePickerOverlay implements Focusable {
     // --- Input handling ---
 
     handleInput(data: string): void {
-        const kb = getEditorKeybindings();
+        const kb = this.keybindings;
 
         // --- Close ---
-        if (kb.matches(data, "selectCancel")) {
+        if (kb.matches(data, "tui.select.cancel")) {
             this.cleanup();
             this.done(null);
             return;
         }
 
         // --- Confirm ---
-        if (kb.matches(data, "selectConfirm")) {
+        if (kb.matches(data, "tui.select.confirm")) {
             const item = this.results[this.selectedIndex];
             this.cleanup();
             this.done(item?.path ?? null);
@@ -361,13 +362,13 @@ class FilePickerOverlay implements Focusable {
         }
 
         // --- File list navigation ---
-        if (kb.matches(data, "selectUp") || matchesKey(data, "ctrl+p") || matchesKey(data, "ctrl+k")) {
+        if (kb.matches(data, "tui.select.up") || matchesKey(data, "ctrl+p") || matchesKey(data, "ctrl+k")) {
             this.moveSelection(-1);
             this.tui.requestRender();
             return;
         }
 
-        if (kb.matches(data, "selectDown") || matchesKey(data, "ctrl+n") || matchesKey(data, "ctrl+j")) {
+        if (kb.matches(data, "tui.select.down") || matchesKey(data, "ctrl+n") || matchesKey(data, "ctrl+j")) {
             this.moveSelection(1);
             this.tui.requestRender();
             return;
@@ -583,9 +584,9 @@ class FilePickerOverlay implements Focusable {
 async function openFilePicker(ctx: ExtensionContext): Promise<void> {
     let appTui: TUI | null = null;
     const result = await ctx.ui.custom<string | null>(
-        (tui, theme, _kb, done) => {
+        (tui, theme, keybindings, done) => {
             appTui = tui;
-            return new FilePickerOverlay(tui, theme, done);
+            return new FilePickerOverlay(tui, theme, keybindings, done);
         },
         {
             overlay: true,

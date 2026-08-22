@@ -8,6 +8,3 @@ setopt HIST_REDUCE_BLANKS
 HISTSIZE=32768
 HISTFILE="$HOME/.zsh_history"
 SAVEHIST="${HISTSIZE}"
-
-# Set complete path
-export PATH="./bin:$HOME/.local/bin:$HOME/.local/share/omarchy/bin:$PATH"

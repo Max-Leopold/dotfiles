@@ -2,7 +2,6 @@ return {
   'petertriho/nvim-scrollbar',
   dependencies = { 'lewis6991/gitsigns.nvim' },
   config = function()
-    require('gitsigns').setup()
     require('scrollbar').setup({
       hide_if_all_visible = true,
       handle = {

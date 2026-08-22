@@ -67,7 +67,7 @@ Example output:
   ]
 }`;
 
-const CODEX_MODEL_ID = "gpt-5.1-codex-mini";
+const CODEX_MODEL_IDS = ["gpt-5.4-mini", "gpt-5.4"];
 const HAIKU_MODEL_ID = "claude-haiku-4-5";
 
 /**
@@ -80,11 +80,13 @@ async function selectExtractionModel(
 		getApiKey: (model: Model<Api>) => Promise<string | undefined>;
 	},
 ): Promise<Model<Api>> {
-	const codexModel = modelRegistry.find("openai-codex", CODEX_MODEL_ID);
-	if (codexModel) {
-		const apiKey = await modelRegistry.getApiKey(codexModel);
-		if (apiKey) {
-			return codexModel;
+	for (const modelId of CODEX_MODEL_IDS) {
+		const codexModel = modelRegistry.find("openai-codex", modelId);
+		if (codexModel) {
+			const apiKey = await modelRegistry.getApiKey(codexModel);
+			if (apiKey) {
+				return codexModel;
+			}
 		}
 	}
 

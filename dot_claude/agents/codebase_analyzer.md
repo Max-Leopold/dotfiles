@@ -1,7 +1,7 @@
 ---
 name: codebase-analyzer
 description: Analyzes codebase implementation details. Call the codebase-analyzer agent when you need to find detailed information about specific components.
-tools: Read, Grep, Glob, LS
+tools: Read, Grep, Glob
 model: opus
 ---
 

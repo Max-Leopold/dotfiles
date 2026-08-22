@@ -7,10 +7,14 @@ if command -v zoxide &> /dev/null; then
 fi
 
 if command -v fzf &> /dev/null; then
-  if [[ -f /usr/share/fzf/completion.zsh ]]; then
+  if fzf --zsh >/dev/null 2>&1; then
+    source <(fzf --zsh)
+  elif [[ -f /usr/share/fzf/completion.zsh ]]; then
     source /usr/share/fzf/completion.zsh
+    [[ -f /usr/share/fzf/key-bindings.zsh ]] && source /usr/share/fzf/key-bindings.zsh
   fi
-  if [[ -f /usr/share/fzf/key-bindings.zsh ]]; then
-    source /usr/share/fzf/key-bindings.zsh
-  fi
+fi
+
+if [ -n "${BUN_INSTALL:-}" ] && [ -r "$BUN_INSTALL/_bun" ]; then
+  source "$BUN_INSTALL/_bun"
 fi

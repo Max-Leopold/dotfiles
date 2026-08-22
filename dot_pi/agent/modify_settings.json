@@ -10,12 +10,18 @@ fi
 
 MANAGED='{
   "compaction": {
-    "enabled": false
-  },
-  "skills": ["~/.pi/agent/skills", "~/.claude/skills"],
-  "prompts": ["~/.pi/agent/prompts", "~/.claude/commands"],
-  "extensions": ["~/.pi/agent/extensions"]
+    "enabled": true
+  }
 }'
+
+# Remove paths that Pi discovers automatically or that no longer exist.
+OBSOLETE_PATHS='[
+  "~/.pi/agent/skills",
+  "~/.pi/agent/prompts",
+  "~/.pi/agent/extensions",
+  "~/.claude/skills",
+  "~/.claude/commands"
+]'
 
 # Read current file from stdin; if empty, start with {}
 CURRENT=$(cat)
@@ -24,9 +30,14 @@ if [ -z "$CURRENT" ]; then
 fi
 
 # Deep merge: managed keys win; array values are unioned and deduplicated.
-echo "$CURRENT" | jq --argjson managed "$MANAGED" '
+echo "$CURRENT" | jq --argjson managed "$MANAGED" --argjson obsolete "$OBSOLETE_PATHS" '
   . as $current | . * $managed
   | reduce ("skills", "prompts", "extensions") as $k (.;
-      .[$k] = ([($current[$k] // [])[], ($managed[$k] // [])[]] | unique)
+      (
+        [($current[$k] // [])[], ($managed[$k] // [])[]]
+        | map(select(. as $entry | $obsolete | index($entry) | not))
+        | unique
+      ) as $values
+      | if ($values | length) > 0 then .[$k] = $values else del(.[$k]) end
     )
 '

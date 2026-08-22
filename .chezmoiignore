@@ -1,1 +1,20 @@
+# Repository-only files
+.context
+.context/**
+Brewfile
+
+# Machine-local files
 .config/hypr/monitors.conf.local
+
+{{ if ne .chezmoi.os "linux" }}
+# Linux desktop configuration
+.config/shell/linux
+.config/btop
+.config/btop/**
+.config/hypr
+.config/hypr/**
+.config/waybar
+.config/waybar/**
+.config/wofi
+.config/wofi/**
+{{ end }}

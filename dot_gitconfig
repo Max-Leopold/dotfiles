@@ -3,6 +3,9 @@
 	name = Max Leopold
 	email = max.leopold2111@gmail.com
 
+[include]
+	path = ~/.gitconfig.local
+
 [filter "lfs"]
 	required = true
 	clean = git-lfs clean -- %f
@@ -10,14 +13,14 @@
 	process = git-lfs filter-process
 
 [core]
-  pager = delta
+	pager = delta
 
 [interactive]
-  diffFilter = delta --color-only
+	diffFilter = delta --color-only
 
 [delta]
-  navigate = true
-  dark = true
+	navigate = true
+	dark = true
 
 [merge]
-  conflictStyle = zdiff3
+	conflictStyle = zdiff3

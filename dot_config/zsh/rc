@@ -1,9 +1,17 @@
 source ~/.config/zsh/shell
+source ~/.config/shell/envs
 source ~/.config/shell/aliases
 source ~/.config/shell/functions
+
+if [ -f ~/.config/shell/"$(uname -s | tr '[:upper:]' '[:lower:]')" ]; then
+  source ~/.config/shell/"$(uname -s | tr '[:upper:]' '[:lower:]')"
+fi
+
 source ~/.config/zsh/init
-source ~/.config/shell/envs
 source ~/.config/zsh/prompt
+
+# Remove duplicate path entries while preserving their order.
+typeset -U path PATH
 
 if [ -f ~/.config/zsh/local ]; then
   source ~/.config/zsh/local

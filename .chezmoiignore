@@ -1,7 +1,6 @@
 # Repository-only files
 .context
 .context/**
-README.md
 Brewfile
 
 # Machine-local files

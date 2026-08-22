@@ -3,8 +3,6 @@
 .context/**
 README.md
 Brewfile
-scripts
-scripts/**
 
 # Machine-local files
 .config/hypr/monitors.conf.local

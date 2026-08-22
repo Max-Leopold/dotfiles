@@ -48,17 +48,3 @@ Chezmoi does not delete files merely because they become ignored. On a Mac that 
 Neovim targets the current stable 0.11 API. Treesitter is explicitly pinned to its backwards-compatible `master` branch; its newer `main` branch requires Neovim 0.12. `lazy-lock.json` makes clean installations reproducible.
 
 Claude Code retains only the shared `CLAUDE.md` instructions. This repository no longer manages commands, skills, or agents.
-
-## Validation
-
-Run the local checks after changing configuration:
-
-```sh
-./scripts/check.sh
-```
-
-To additionally install all Neovim plugins in an isolated temporary home and verify startup:
-
-```sh
-./scripts/check.sh --bootstrap-nvim
-```

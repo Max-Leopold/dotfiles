@@ -1,18 +1,13 @@
-source ~/.config/zsh/shell
-source ~/.config/shell/envs
-source ~/.config/shell/aliases
-source ~/.config/shell/functions
+# Shared configuration
+source "$HOME/.config/zsh/shell"
+source "$HOME/.config/shell/envs"
+source "$HOME/.config/shell/aliases"
+source "$HOME/.config/shell/functions"
 
-if [ -f ~/.config/shell/"$(uname -s | tr '[:upper:]' '[:lower:]')" ]; then
-  source ~/.config/shell/"$(uname -s | tr '[:upper:]' '[:lower:]')"
-fi
+[[ "$OSTYPE" == linux* && -r "$HOME/.config/shell/linux" ]] && source "$HOME/.config/shell/linux"
 
-source ~/.config/zsh/init
-source ~/.config/zsh/prompt
+# Zsh-specific configuration
+source "$HOME/.config/zsh/init"
+source "$HOME/.config/zsh/prompt"
 
-# Remove duplicate path entries while preserving their order.
-typeset -U path PATH
-
-if [ -f ~/.config/zsh/local ]; then
-  source ~/.config/zsh/local
-fi
+[[ -r "$HOME/.config/zsh/local" ]] && source "$HOME/.config/zsh/local"

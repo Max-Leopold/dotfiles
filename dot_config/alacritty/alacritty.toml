@@ -1,3 +1,22 @@
+live_config_reload = false
+ipc_socket = false
+
+[window]
+padding = { x = 8, y = 8 }
+dynamic_padding = true
+dynamic_title = false
+option_as_alt = "OnlyLeft"
+
+[mouse]
+hide_when_typing = true
+
+[terminal.shell]
+program = "/bin/zsh"
+args = ["-d"]
+
+[scrolling]
+history = 10000
+
 [font]
 size = 14
 

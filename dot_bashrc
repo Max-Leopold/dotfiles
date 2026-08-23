@@ -1,1 +1,1 @@
-source ~/.config/bash/rc
+source "$HOME/.config/bash/rc"

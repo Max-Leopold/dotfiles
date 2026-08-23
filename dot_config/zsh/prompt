@@ -1,9 +1,45 @@
-# Technicolor dreams
-force_color_prompt=yes
-color_prompt=yes
+# Zsh expands the directory itself, so this has no subprocess cost.
+PROMPT='%F{cyan}%1~%f > '
+RPROMPT=''
 
-if command -v starship &> /dev/null; then
-  eval "$(starship init zsh)"
-else
-  PROMPT=$'\uf0a9 '
-fi
+# Read Git's HEAD directly rather than spawning `git` or a prompt binary.
+# This stays accurate after checkout/switch while adding only filesystem reads.
+_dotfiles_update_git_prompt() {
+  local dir="$PWD"
+  local git_dir=''
+  local git_file=''
+  local head=''
+  local branch=''
+
+  while [[ "$dir" != / ]]; do
+    if [[ -d "$dir/.git" ]]; then
+      git_dir="$dir/.git"
+      break
+    elif [[ -f "$dir/.git" ]]; then
+      IFS= read -r git_file < "$dir/.git"
+      git_dir="${git_file#gitdir: }"
+      [[ "$git_dir" == /* ]] || git_dir="$dir/$git_dir"
+      break
+    fi
+    dir="${dir:h}"
+  done
+
+  if [[ -n "$git_dir" && -r "$git_dir/HEAD" ]]; then
+    IFS= read -r head < "$git_dir/HEAD"
+    if [[ "$head" == 'ref: refs/heads/'* ]]; then
+      branch="${head#ref: refs/heads/}"
+    elif [[ -n "$head" ]]; then
+      branch="${head[1,7]}"
+    fi
+  fi
+
+  # Escape percent signs so branch names cannot be parsed as prompt escapes.
+  branch="${branch//\%/%%}"
+  if [[ -n "$branch" ]]; then
+    PROMPT="%F{cyan}%1~%f %F{magenta}${branch}%f > "
+  else
+    PROMPT='%F{cyan}%1~%f > '
+  fi
+}
+
+precmd_functions+=(_dotfiles_update_git_prompt)

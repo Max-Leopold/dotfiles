@@ -1,15 +1,13 @@
-source ~/.config/bash/shell
-source ~/.config/shell/envs
-source ~/.config/shell/aliases
-source ~/.config/shell/functions
+# Shared configuration
+source "$HOME/.config/bash/shell"
+source "$HOME/.config/shell/envs"
+source "$HOME/.config/shell/aliases"
+source "$HOME/.config/shell/functions"
 
-if [ -f ~/.config/shell/"$(uname -s | tr '[:upper:]' '[:lower:]')" ]; then
-  source ~/.config/shell/"$(uname -s | tr '[:upper:]' '[:lower:]')"
-fi
+[[ "$OSTYPE" == linux* && -r "$HOME/.config/shell/linux" ]] && source "$HOME/.config/shell/linux"
 
-source ~/.config/bash/init
-source ~/.config/bash/prompt
+# Bash-specific configuration
+source "$HOME/.config/bash/init"
+source "$HOME/.config/bash/prompt"
 
-if [ -f ~/.config/bash/local ]; then
-  source ~/.config/bash/local
-fi
+[[ -r "$HOME/.config/bash/local" ]] && source "$HOME/.config/bash/local"

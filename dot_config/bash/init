@@ -5,12 +5,3 @@ fi
 if command -v zoxide &> /dev/null; then
   eval "$(zoxide init bash)"
 fi
-
-if command -v fzf &> /dev/null; then
-  if fzf --bash >/dev/null 2>&1; then
-    eval "$(fzf --bash)"
-  elif [[ -f /usr/share/bash-completion/completions/fzf ]]; then
-    source /usr/share/bash-completion/completions/fzf
-    [[ -f /usr/share/fzf/key-bindings.bash ]] && source /usr/share/fzf/key-bindings.bash
-  fi
-fi

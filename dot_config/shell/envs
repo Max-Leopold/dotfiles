@@ -1,17 +1,20 @@
 # Shared environment for Bash and Zsh. Keep this static: spawning helpers such
-# as `brew shellenv` here would add work to every interactive shell.
+# as `brew shellenv` here would add work to every interactive shell. The
+# inherited $PATH goes last so system and Chef-managed entries (macOS
+# /etc/paths.d, e.g. /opt/facebook/bin) still resolve.
 case "$OSTYPE" in
   darwin*)
-    PATH="$HOME/.local/share/mise/shims:/opt/homebrew/bin:$HOME/.local/bin:$HOME/.bun/bin:/opt/homebrew/sbin:$HOME/.swiftly/bin:$HOME/.cargo/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/Library/TeX/texbin"
+    PATH="$HOME/.local/share/mise/shims:/opt/homebrew/bin:$HOME/.local/bin:$HOME/.bun/bin:/opt/homebrew/sbin:$HOME/.swiftly/bin:$HOME/.cargo/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/Library/TeX/texbin:$PATH"
     if [ -n "${ZSH_VERSION:-}" ]; then
       FPATH="/opt/homebrew/share/zsh/site-functions:/usr/local/share/zsh/site-functions:/usr/share/zsh/site-functions:/usr/share/zsh/$ZSH_VERSION/functions"
       typeset +x FPATH
     fi
     ;;
   linux*)
-    PATH="$HOME/.local/share/mise/shims:$HOME/.local/bin:$HOME/.bun/bin:$HOME/.local/share/omarchy/bin:/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin"
+    PATH="$HOME/.local/share/mise/shims:$HOME/.local/bin:$HOME/.bun/bin:$HOME/.local/share/omarchy/bin:/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin:$PATH"
     ;;
 esac
+[ -n "${ZSH_VERSION:-}" ] && typeset -U path
 
 export PATH EDITOR=nvim SUDO_EDITOR=nvim
 export BUN_INSTALL="$HOME/.bun"
